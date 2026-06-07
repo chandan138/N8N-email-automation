@@ -1,0 +1,243 @@
+{
+  "name": "mailfast",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "mailfast/inbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -620,
+        0
+      ],
+      "id": "mailfast-webhook",
+      "name": "Client Inbound Webhook",
+      "webhookId": "mailfast-inbound"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body || item;\nreturn [{\n  json: {\n    clientId: body.clientId,\n    clientGmail: body.clientGmail || body.gmail,\n    from: body.from || body.From,\n    subject: body.subject || body.Subject || '(no subject)',\n    snippet: body.snippet || body.message || body.text || '',\n    priority: body.priority || 'normal',\n    replyTone: body.replyTone || 'professional and concise',\n    signoffName: body.signoffName || 'MailFast user'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        0
+      ],
+      "id": "mailfast-normalize",
+      "name": "Normalize Client Email"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-client",
+              "leftValue": "={{ $json.clientId || $json.clientGmail }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "not-promotional",
+              "leftValue": "={{ $json.subject + ' ' + $json.snippet }}",
+              "rightValue": "unsubscribe",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -140,
+        0
+      ],
+      "id": "mailfast-filter",
+      "name": "Filter Useful Mail"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Incoming email from {{ $json.from }}\\nSubject: {{ $json.subject }}\\nMessage: {{ $json.snippet }}",
+        "options": {
+          "systemMessage": "=You are MailFast AI, an email assistant replying on behalf of a client. Use a {{ $json.replyTone }} tone. Summarize the sender's main point, answer helpfully, ask for clarification when needed, and avoid commitments unless explicitly provided. Reply in first person. Keep the reply under 200 words. Close with: Best regards, {{ $json.signoffName }}."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        120,
+        0
+      ],
+      "id": "mailfast-brain",
+      "name": "MailFast Brain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        120,
+        220
+      ],
+      "id": "mailfast-gemini",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalize Client Email').item.json.from }}",
+        "subject": "=Re: {{ $('Normalize Client Email').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        460,
+        0
+      ],
+      "id": "mailfast-gmail-send",
+      "name": "Send Gmail Reply"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MAILFAST_APP_URL || 'http://localhost:5000' }}/api/n8n/incoming",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"clientId\": \"{{ $('Normalize Client Email').item.json.clientId }}\",\n  \"clientGmail\": \"{{ $('Normalize Client Email').item.json.clientGmail }}\",\n  \"from\": \"{{ $('Normalize Client Email').item.json.from }}\",\n  \"subject\": \"{{ $('Normalize Client Email').item.json.subject }}\",\n  \"snippet\": \"{{ $('Normalize Client Email').item.json.snippet }}\",\n  \"priority\": \"{{ $('Normalize Client Email').item.json.priority }}\",\n  \"aiReply\": \"{{ $('MailFast Brain').item.json.output }}\",\n  \"status\": \"replied\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        0
+      ],
+      "id": "mailfast-dashboard-callback",
+      "name": "Store In MailFast Dashboard"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"ok\": true, \"message\": \"MailFast reply generated and stored\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        980,
+        0
+      ],
+      "id": "mailfast-response",
+      "name": "Respond To Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Client Inbound Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Client Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Client Email": {
+      "main": [
+        [
+          {
+            "node": "Filter Useful Mail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Useful Mail": {
+      "main": [
+        [
+          {
+            "node": "MailFast Brain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "MailFast Brain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MailFast Brain": {
+      "main": [
+        [
+          {
+            "node": "Send Gmail Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Gmail Reply": {
+      "main": [
+        [
+          {
+            "node": "Store In MailFast Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store In MailFast Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Respond To Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
