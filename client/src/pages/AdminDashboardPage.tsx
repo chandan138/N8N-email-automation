@@ -118,7 +118,17 @@ export function AdminDashboardPage() {
                   {client.phone && <div className="client-meta">📞 {client.phone}</div>}
                 </div>
                 <div className="client-card-right">
-                  <span className={`status-badge ${client.status.replace(/\s+/g, "-")}`}>{client.status}</span>
+                  {client.n8nWorkflowId ? (
+                    <button 
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(`http://localhost:5678/workflow/${client.n8nWorkflowId}`, '_blank'); }}
+                      className={`status-badge clickable ${client.status.replace(/\s+/g, "-")}`}
+                      title="Open n8n workflow"
+                    >
+                      {client.status} <ExternalLink size={10} style={{ marginLeft: 4, display: 'inline' }} />
+                    </button>
+                  ) : (
+                    <span className={`status-badge ${client.status.replace(/\s+/g, "-")}`}>{client.status}</span>
+                  )}
                   {client.gmailConnected
                     ? <span className="gmail-badge connected"><Wifi size={13} /> Gmail on</span>
                     : <span className="gmail-badge disconnected"><WifiOff size={13} /> Gmail off</span>
