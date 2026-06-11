@@ -108,49 +108,70 @@ export async function createClientWorkflow(client: {
 }
 
 /**
- * Create a Gmail OAuth2 credential in n8n using tokens obtained from our OAuth flow.
- * Returns the credential ID.
+ * Create an IMAP credential in n8n.
  */
-export async function createN8nCredential(client: {
-  id: string;
-  name: string;
-  gmail: string;
-}, tokens: {
-  accessToken: string;
-  refreshToken: string;
-  expiryDate: number;
-}): Promise<string> {
+export async function createN8nImapCredential(clientId: string, email: string, password: string): Promise<string> {
   const credential = await n8nFetch("/credentials", "POST", {
-    name: `Gmail - ${client.name} (${client.gmail})`,
-    type: "gmailOAuth2",
+    name: `IMAP - ${email}`,
+    type: "imap",
     data: {
-      clientId: env.googleClientId,
-      clientSecret: env.googleClientSecret,
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiryDate: tokens.expiryDate
+      user: email,
+      password: password,
+      host: "imap.gmail.com",
+      port: 993,
+      secure: true
     }
   }) as any;
   return credential.id;
 }
 
 /**
- * Update the workflow's Gmail nodes to use the newly created credential.
+ * Create an SMTP credential in n8n.
  */
-export async function assignCredentialToWorkflow(workflowId: string, credentialId: string, credentialName: string): Promise<void> {
+export async function createN8nSmtpCredential(clientId: string, email: string, password: string): Promise<string> {
+  const credential = await n8nFetch("/credentials", "POST", {
+    name: `SMTP - ${email}`,
+    type: "smtp",
+    data: {
+      user: email,
+      password: password,
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true
+    }
+  }) as any;
+  return credential.id;
+}
+
+/**
+ * Update the workflow's nodes to use the newly created credentials.
+ */
+export async function assignCredentialToWorkflow(workflowId: string, credentialId: string, type: "imap" | "smtp"): Promise<void> {
   const workflow = await n8nFetch(`/workflows/${workflowId}`) as any;
 
-  // Find Gmail nodes that need credentials assigned
-  const gmailNodeTypes = ["n8n-nodes-base.gmailTrigger", "n8n-nodes-base.gmail"];
-  for (const node of workflow.nodes) {
-    if (gmailNodeTypes.includes(node.type)) {
-      node.credentials = {
-        gmailOAuth2: { id: credentialId, name: credentialName }
-      };
+  if (type === "imap") {
+    for (const node of workflow.nodes) {
+      if (node.type === "n8n-nodes-base.emailReadImap") {
+        node.credentials = { imap: { id: credentialId } };
+      }
+    }
+  } else if (type === "smtp") {
+    for (const node of workflow.nodes) {
+      if (node.type === "n8n-nodes-base.emailSend") {
+        node.credentials = { smtp: { id: credentialId } };
+      }
     }
   }
 
-  await n8nFetch(`/workflows/${workflowId}`, "PUT", workflow);
+  // Only send the fields that n8n allows for updates
+  const updatePayload = {
+    name: workflow.name,
+    nodes: workflow.nodes,
+    connections: workflow.connections,
+    settings: workflow.settings
+  };
+
+  await n8nFetch(`/workflows/${workflowId}`, "PUT", updatePayload);
 }
 
 /**

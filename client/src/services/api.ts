@@ -53,6 +53,7 @@ export function clearSession() {
 }
 
 export const deleteClient = (id: string) => api.delete(`/clients/${id}`);
-export const getGmailOAuthUrl = (clientId: string) => api.get<{ url: string }>(`/gmail/oauth/url/${clientId}`);
+export const connectGmailAppPassword = (clientId: string, email: string, appPassword: string) => 
+  api.post<{ message: string, client: Client }>(`/gmail/connect/${clientId}`, { email, appPassword });
 export const getUserEmails = () => api.get<{ emails: EmailItem[]; client: Client | null }>("/user/emails");
 export const getUserActivity = () => api.get<{ activities: Activity[]; client: Client | null }>("/user/activity");

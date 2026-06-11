@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ExternalLink, Wifi, WifiOff } from "lucide-react";
-import { Activity, api, Client, EmailItem, Template, getGmailOAuthUrl } from "../services/api";
+import { ArrowLeft, ExternalLink, Wifi, WifiOff, X } from "lucide-react";
+import { Activity, api, Client, EmailItem, Template, connectGmailAppPassword } from "../services/api";
 
 type Tab = "communication" | "tracking" | "templates" | "activity";
 
@@ -18,6 +18,7 @@ export function ClientPage() {
   const [error, setError] = useState("");
   const [gmailMsg, setGmailMsg] = useState("");
   const [connectingGmail, setConnectingGmail] = useState(false);
+  const [connectLoading, setConnectLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -36,10 +37,7 @@ export function ClientPage() {
   useEffect(() => {
     load();
     const timer = setInterval(load, 6000);
-    // Check for Gmail OAuth redirect
-    if (searchParams.get("gmailConnected")) {
-      setGmailMsg("Gmail connected and workflow activated successfully!");
-    }
+    // No OAuth redirects here anymore
     return () => clearInterval(timer);
   }, [load, searchParams]);
 
@@ -48,16 +46,22 @@ export function ClientPage() {
     return text.includes(search.toLowerCase()) && (priority === "all" || email.priority === priority);
   }), [emails, search, priority]);
 
-  async function handleConnectGmail() {
+  async function submitConnectGmail(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!client) return;
-    setConnectingGmail(true);
+    setConnectLoading(true);
+    setError("");
+    setGmailMsg("");
+    const body = Object.fromEntries(new FormData(event.currentTarget).entries());
     try {
-      const { data } = await getGmailOAuthUrl(client._id);
-      window.open(data.url, "_blank", "width=600,height=700");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to get Gmail OAuth URL.");
-    } finally {
+      const { data } = await connectGmailAppPassword(client._id, body.email as string, body.appPassword as string);
+      setClient(data.client);
+      setGmailMsg("Gmail connected via App Password successfully.");
       setConnectingGmail(false);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to connect Gmail.");
+    } finally {
+      setConnectLoading(false);
     }
   }
 
@@ -83,26 +87,26 @@ export function ClientPage() {
         <div className="client-header-top">
           <Link to="/admin" className="btn-outline-sm"><ArrowLeft size={15} /> Dashboard</Link>
           <div className="client-header-badges">
-            {client.n8nWorkflowId ? (
-              <button 
-                onClick={(e) => { e.preventDefault(); window.open(`http://localhost:5678/workflow/${client.n8nWorkflowId}`, '_blank'); }}
-                className={`status-badge clickable ${client.status.replace(/\s+/g, "-")}`}
-                title="Open n8n workflow"
-              >
-                {client.status} <ExternalLink size={10} style={{ marginLeft: 4, display: 'inline' }} />
-              </button>
-            ) : (
-              <span className={`status-badge ${client.status.replace(/\s+/g, "-")}`}>{client.status}</span>
-            )}
+            <button 
+              onClick={(e) => { 
+                e.preventDefault(); 
+                e.stopPropagation();
+                window.open(client.n8nWorkflowId ? `http://localhost:5678/workflow/${client.n8nWorkflowId}` : `http://localhost:5678/workflows`, '_blank'); 
+              }}
+              className={`status-badge clickable ${client.status.replace(/\s+/g, "-")}`}
+              title={client.n8nWorkflowId ? "Open n8n workflow" : "Open n8n dashboard"}
+            >
+              {client.status} <ExternalLink size={10} style={{ marginLeft: 4, display: 'inline' }} />
+            </button>
             {client.gmailConnected
               ? <span className="gmail-badge connected"><Wifi size={13} /> Gmail connected</span>
               : (
                 <button
-                  onClick={handleConnectGmail}
-                  disabled={connectingGmail}
+                  onClick={() => setConnectingGmail(true)}
+                  disabled={connectLoading}
                   className="gmail-badge disconnected clickable"
                 >
-                  <WifiOff size={13} /> {connectingGmail ? "Opening…" : "Connect Gmail"}
+                  <WifiOff size={13} /> Connect Gmail
                   <ExternalLink size={12} />
                 </button>
               )
@@ -228,6 +232,36 @@ export function ClientPage() {
             )}
           </div>
         </section>
+      )}
+      {/* Connect Gmail App Password Modal */}
+      {connectingGmail && client && (
+        <div className="modal-overlay" onClick={() => !connectLoading && setConnectingGmail(false)}>
+          <section className="modal-card modal-card-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">Connect Gmail Account</h2>
+                <p className="modal-sub">Use an App Password to securely connect Gmail.</p>
+              </div>
+              {!connectLoading && <button onClick={() => setConnectingGmail(false)} className="modal-close"><X size={18} /></button>}
+            </div>
+            
+            <div className="alert alert-success" style={{ marginBottom: 16, backgroundColor: '#f0f9ff', borderColor: '#bae6fd', color: '#0369a1' }}>
+              <strong>Important:</strong> Google requires a 16-letter App Password. You cannot use your normal Google password. <a href="https://support.google.com/accounts/answer/185833?hl=en" target="_blank" rel="noreferrer" style={{textDecoration: 'underline'}}>Learn how to generate one</a>.
+            </div>
+
+            <form onSubmit={submitConnectGmail} className="modal-form">
+              <input name="email" type="email" required placeholder="Gmail Address" defaultValue={client.gmail} className="form-input" />
+              <input name="appPassword" type="password" required placeholder="16-letter App Password (e.g. abcd efgh ijkl mnop)" className="form-input" />
+              
+              <div className="modal-actions">
+                <button type="button" onClick={() => setConnectingGmail(false)} disabled={connectLoading} className="btn-outline">Cancel</button>
+                <button type="submit" disabled={connectLoading} className="btn-primary">
+                  {connectLoading ? "Connecting…" : "Connect & Activate"}
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       )}
     </main>
   );

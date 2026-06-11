@@ -3,7 +3,7 @@
   "nodes": [
     {
       "parameters": {
-        "jsCode": "// Loop over input items and extract specific email fields\nreturn $input.all().map(item => {\n  return {\n    json: {\n      From: item.json.From,\n      Subject: item.json.Subject,\n      snippet: item.json.snippet\n    }\n  };\n});"
+        "jsCode": "return $input.all().map(item => ({\n  json: {\n    From: item.json.from.address,\n    Subject: item.json.subject,\n    snippet: item.json.textPlain ? item.json.textPlain.substring(0, 100) : ''\n  }\n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -29,50 +29,17 @@
     },
     {
       "parameters": {
-        "operation": "markAsRead",
-        "messageId": "={{ $('Gmail Trigger1').item.json.id }}"
+        "postProcessAction": "nothing",
+        "downloadAttachments": false
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
-      "position": [
-        -544,
-        -304
-      ],
-      "id": "44f53942-7254-4644-8e40-54df20dd4ba6",
-      "name": "Mark a message as read1",
-      "webhookId": "8ea27b2c-ee85-4873-89e0-543da7b1b7f5",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "QlxGHhSKEw7HnmyO",
-          "name": "Gmail account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": []
-        },
-        "maxResults": 20,
-        "filters": {
-          "includeSpamTrash": false,
-          "readStatus": "unread"
-        }
-      },
-      "type": "n8n-nodes-base.gmailTrigger",
-      "typeVersion": 1.4,
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2,
       "position": [
         -1168,
         -480
       ],
       "id": "834e6419-65b9-4c96-bd1b-22a40ca9beb4",
-      "name": "Gmail Trigger1",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "QlxGHhSKEw7HnmyO",
-          "name": "Gmail account"
-        }
-      }
+      "name": "Gmail Trigger1"
     },
     {
       "parameters": {
@@ -96,50 +63,20 @@
     },
     {
       "parameters": {
-        "sendTo": "={{ $('Gmail Trigger1').item.json.From }}",
-        "subject": "automated  reply",
-        "emailType": "text",
-        "message": "={{ $json.output }}",
-        "options": {
-          "appendAttribution": false
-        }
+        "fromEmail": "",
+        "toEmail": "={{ $('Gmail Trigger1').item.json.from.address }}",
+        "subject": "automated reply",
+        "text": "={{ $json.output }}"
       },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
       "position": [
         352,
         -496
       ],
       "id": "baa4f8be-8aeb-415e-b0b5-107200ee450e",
       "name": "Send a message1",
-      "webhookId": "d3151067-ff30-4684-9711-e79a3a58373a",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "QlxGHhSKEw7HnmyO",
-          "name": "Gmail account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "markAsRead",
-        "messageId": "={{ $('Gmail Trigger1').item.json.id }}"
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
-      "position": [
-        1056,
-        -496
-      ],
-      "id": "3812eed5-baa9-4264-9f9f-2f0f0fb99338",
-      "name": "Mark a message as read2",
-      "webhookId": "e6781df3-b107-47c3-a4ec-5d3445cf5458",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "QlxGHhSKEw7HnmyO",
-          "name": "Gmail account"
-        }
-      }
+      "webhookId": "d3151067-ff30-4684-9711-e79a3a58373a"
     },
     {
       "parameters": {
@@ -160,7 +97,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ clientGmail: $('Gmail Trigger1').item.json.To || $('Gmail Trigger1').item.json.to || '', from: $json.from || '', subject: $json.subject || '', snippet: $json.snippet || '', aiReply: $json.aiReply || '', priority: 'normal', status: 'replied' }) }}",
+        "jsonBody": "={{ JSON.stringify({ clientGmail: $('Gmail Trigger1').item.json.to?.address || $('Gmail Trigger1').item.json.to || $('Gmail Trigger1').item.json.To || '', from: $('clean data A').first().json.From || '', subject: $('clean data A').first().json.Subject || '', snippet: $('clean data A').first().json.snippet || '', aiReply: $json.aiReply || '', priority: 'normal', status: 'replied' }) }}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -188,129 +125,6 @@
       ],
       "id": "c4ad4231-b778-45b0-8c4d-423976f51b8a",
       "name": "MailBrain1"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "ca577999-9ed6-4aa3-8203-b6016210147c",
-              "leftValue": "={{ $json.labels[2].id }}",
-              "rightValue": "READ",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "id": "91db3116-8498-4391-b465-ee6e42bc7669",
-              "leftValue": "={{ $json.labels[1].id }}",
-              "rightValue": "CATEGORY_UPDATES",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "id": "f4d1b1f8-0898-4042-a7b1-7ba2f305ad27",
-              "leftValue": "={{ $json.Subject }}",
-              "rightValue": " Request for Email Verification",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "id": "fb052f8e-e0e1-4126-a422-20a57b709d06",
-              "leftValue": "={{ $json.labels[2].id }}",
-              "rightValue": "CATEGORY_PROMOTIONS",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            },
-            {
-              "id": "8fb5cb00-5d81-485d-bf35-263ed3b5b381",
-              "leftValue": "={{ $json.labels[1].id }}",
-              "rightValue": "CATEGORY_PROMOTIONS",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -736,
-        -480
-      ],
-      "id": "2ddbd1db-f59c-4877-85e3-95cb53a9db0d",
-      "name": "If2"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "0522407b-1d7d-4bf6-bf63-6423aaab1b5e",
-              "leftValue": "={{ $json.labels[2].id }}",
-              "rightValue": "CATEGORY_PROMOTIONS",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -896,
-        -688
-      ],
-      "id": "b101e752-3ba4-43cd-b8f0-4128f303862a",
-      "name": "If3"
-    },
-    {
-      "parameters": {
-        "operation": "delete",
-        "messageId": "={{ $('Gmail Trigger1').item.json.id }}"
-      },
-      "type": "n8n-nodes-base.gmail",
-      "typeVersion": 2.2,
-      "position": [
-        -624,
-        -704
-      ],
-      "id": "f8959f6d-a4cf-46cd-95fa-0f1a9e5d6e58",
-      "name": "Delete a message1",
-      "webhookId": "a392d503-e5b4-4444-98e1-18b79fc5278a",
-      "credentials": {
-        "gmailOAuth2": {
-          "id": "QlxGHhSKEw7HnmyO",
-          "name": "Gmail account"
-        }
-      }
     }
   ],
   "pinData": {},
@@ -341,12 +155,7 @@
       "main": [
         [
           {
-            "node": "If3",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "If2",
+            "node": "clean data A",
             "type": "main",
             "index": 0
           }
@@ -377,13 +186,7 @@
     },
     "Store In MailFast Dashboard": {
       "main": [
-        [
-          {
-            "node": "Mark a message as read2",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "MailBrain1": {
@@ -391,35 +194,6 @@
         [
           {
             "node": "Send a message1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If2": {
-      "main": [
-        [
-          {
-            "node": "clean data A",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Mark a message as read1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "If3": {
-      "main": [
-        [
-          {
-            "node": "Delete a message1",
             "type": "main",
             "index": 0
           }
