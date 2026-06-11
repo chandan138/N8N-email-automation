@@ -6,12 +6,14 @@ import { Activity } from "../models/Activity.js";
 import { Template } from "../models/Template.js";
 
 export async function seedDatabase() {
+  // Upsert demo admin — always role: "admin"
   await User.findOneAndUpdate(
     { email: "admin@mailfast.local" },
     {
       name: "Demo Admin",
       email: "admin@mailfast.local",
-      passwordHash: await bcrypt.hash("demo123", 10)
+      passwordHash: await bcrypt.hash("demo123", 10),
+      role: "admin"
     },
     { upsert: true, new: true }
   );
@@ -20,6 +22,7 @@ export async function seedDatabase() {
   if (!clients) {
     const chandan = await Client.create({
       name: "Chandan Kumar",
+      phone: "+91-9000000001",
       company: "Izzki Tech",
       gmail: "chandan@example.com",
       tone: "Professional, concise, first-person replies",
@@ -28,6 +31,7 @@ export async function seedDatabase() {
     });
     const sara = await Client.create({
       name: "Sara Verma",
+      phone: "+91-9000000002",
       company: "BrightOps Studio",
       gmail: "sara@example.com",
       tone: "Warm, direct, helpful",

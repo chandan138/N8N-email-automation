@@ -1,15 +1,17 @@
 import axios from "axios";
 
-export type User = { id: string; name: string; email: string };
+export type User = { id: string; name: string; email: string; role: "admin" | "user" };
 export type Client = {
   _id: string;
   name: string;
+  phone: string;
   company: string;
   gmail: string;
   tone: string;
   notes: string;
   status: string;
   n8nWorkflowId?: string;
+  n8nCredentialId?: string;
   gmailConnected: boolean;
   createdAt: string;
 };
@@ -27,7 +29,6 @@ export type EmailItem = {
 export type Activity = { _id: string; title: string; detail: string; type: string; createdAt: string };
 export type Template = { _id: string; name: string; subject: string; body: string; clientId?: string | null };
 
-// baseURL is "/api" and backend routes are /api/auth, /api/clients etc — correct
 export const api = axios.create({ baseURL: "/api" });
 
 api.interceptors.request.use(config => {
@@ -50,3 +51,8 @@ export function clearSession() {
   localStorage.removeItem("mailfast:token");
   localStorage.removeItem("mailfast:user");
 }
+
+export const deleteClient = (id: string) => api.delete(`/clients/${id}`);
+export const getGmailOAuthUrl = (clientId: string) => api.get<{ url: string }>(`/gmail/oauth/url/${clientId}`);
+export const getUserEmails = () => api.get<{ emails: EmailItem[]; client: Client | null }>("/user/emails");
+export const getUserActivity = () => api.get<{ activities: Activity[]; client: Client | null }>("/user/activity");

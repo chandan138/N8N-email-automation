@@ -1,38 +1,79 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { AuthPage } from "./pages/AuthPage";
-import { DashboardPage } from "./pages/DashboardPage";
+import { AdminDashboardPage } from "./pages/AdminDashboardPage";
 import { ClientPage } from "./pages/ClientPage";
+import { UserHomePage } from "./pages/UserHomePage";
+import { PlansPage } from "./pages/PlansPage";
+import { UserInboxPage } from "./pages/UserInboxPage";
+import { UserDashboardPage } from "./pages/UserDashboardPage";
 import { clearSession, getUser, User } from "./services/api";
-import { LogOut } from "lucide-react";
+import { LogOut, LayoutDashboard } from "lucide-react";
 
-function Shell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+function AdminShell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white">
-      <div className="mx-auto flex min-h-16 w-[min(1240px,calc(100vw-32px))] items-center justify-between gap-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-brand font-black text-white">MF</div>
+    <header className="shell-header">
+      <div className="shell-inner">
+        <div className="shell-brand">
+          <div className="shell-logo">MF</div>
           <div>
-            <div className="font-bold">MailFast AI</div>
-            <div className="text-sm text-slate-500">MERN email automation powered by n8n</div>
+            <div className="shell-title">MailFast AI <span className="shell-badge admin">Admin</span></div>
+            <div className="shell-sub">n8n email automation dashboard</div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden text-sm text-slate-500 md:inline">{user.name} · {user.email}</span>
-          <button onClick={onSignOut} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 font-semibold text-slate-700">
-            <LogOut size={17} /> Sign out
-          </button>
+        <div className="shell-actions">
+          <span className="shell-user">{user.name} · {user.email}</span>
+          <button onClick={onSignOut} className="btn-outline-sm"><LogOut size={15} /> Sign out</button>
         </div>
       </div>
     </header>
   );
 }
 
-function PrivateLayout({ user, onSignOut }: { user: User | null; onSignOut: () => void }) {
+function UserShell({ user, onSignOut }: { user: User; onSignOut: () => void }) {
+  const navigate = useNavigate();
+  return (
+    <header className="shell-header">
+      <div className="shell-inner">
+        <div className="shell-brand">
+          <div className="shell-logo">MF</div>
+          <div>
+            <div className="shell-title">MailFast AI <span className="shell-badge user">User</span></div>
+            <div className="shell-sub">Your personal email automation</div>
+          </div>
+        </div>
+        <nav className="user-nav">
+          <button onClick={() => navigate("/")} className="nav-link">Home</button>
+          <button onClick={() => navigate("/inbox")} className="nav-link">Inbox</button>
+          <button onClick={() => navigate("/dashboard")} className="nav-link"><LayoutDashboard size={15} /> Dashboard</button>
+          <button onClick={() => navigate("/plans")} className="nav-link">Plans</button>
+        </nav>
+        <div className="shell-actions">
+          <span className="shell-user">{user.name}</span>
+          <button onClick={onSignOut} className="btn-outline-sm"><LogOut size={15} /> Sign out</button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function AdminLayout({ user, onSignOut }: { user: User | null; onSignOut: () => void }) {
   if (!user) return <Navigate to="/auth" replace />;
+  if (user.role !== "admin") return <Navigate to="/" replace />;
   return (
     <>
-      <Shell user={user} onSignOut={onSignOut} />
+      <AdminShell user={user} onSignOut={onSignOut} />
+      <Outlet />
+    </>
+  );
+}
+
+function UserLayout({ user, onSignOut }: { user: User | null; onSignOut: () => void }) {
+  if (!user) return <Navigate to="/auth" replace />;
+  if (user.role !== "user") return <Navigate to="/admin" replace />;
+  return (
+    <>
+      <UserShell user={user} onSignOut={onSignOut} />
       <Outlet />
     </>
   );
@@ -42,16 +83,40 @@ export function App() {
   const [user, setUser] = useState<User | null>(() => getUser());
   const navigate = useNavigate();
 
+  function signOut() {
+    clearSession();
+    setUser(null);
+    navigate("/auth");
+  }
+
+  function handleAuth(u: User) {
+    setUser(u);
+    if (u.role === "admin") navigate("/admin");
+    else navigate("/");
+  }
+
   useEffect(() => {
-    if (user && location.pathname === "/auth") navigate("/");
+    if (user && location.pathname === "/auth") {
+      navigate(user.role === "admin" ? "/admin" : "/");
+    }
   }, [user, navigate]);
 
   return (
     <Routes>
-      <Route path="/auth" element={<AuthPage onAuth={setUser} />} />
-      <Route path="/" element={<PrivateLayout user={user} onSignOut={() => { clearSession(); setUser(null); navigate("/auth"); }} />}>
-        <Route index element={<DashboardPage />} />
+      <Route path="/auth" element={<AuthPage onAuth={handleAuth} />} />
+
+      {/* Admin routes */}
+      <Route path="/admin" element={<AdminLayout user={user} onSignOut={signOut} />}>
+        <Route index element={<AdminDashboardPage />} />
         <Route path="clients/:id" element={<ClientPage />} />
+      </Route>
+
+      {/* User routes */}
+      <Route path="/" element={<UserLayout user={user} onSignOut={signOut} />}>
+        <Route index element={<UserHomePage />} />
+        <Route path="inbox" element={<UserInboxPage />} />
+        <Route path="dashboard" element={<UserDashboardPage />} />
+        <Route path="plans" element={<PlansPage />} />
       </Route>
     </Routes>
   );
