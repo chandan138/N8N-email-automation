@@ -52,14 +52,18 @@ export async function createClientWorkflow(client: {
   const templatePath = path.resolve(__dirname, "../../../workflows/mailfast.workflow.json");
   const template = JSON.parse(fs.readFileSync(templatePath, "utf8"));
 
-  // Remove id so n8n creates a fresh workflow
+  // Remove read-only properties so n8n creates a fresh workflow
   delete template.id;
   delete template.versionId;
   delete template.meta;
+  delete template.tags;
+  delete template.createdAt;
+  delete template.updatedAt;
+  template.settings = { executionOrder: 'v1' };
 
   // Rename for this client
   template.name = `MailFast - ${client.name}`;
-  template.active = false;
+  delete template.active;
 
   // Customize MailBrain1 system prompt
   const brainNode = template.nodes.find((n: any) => n.name === "MailBrain1");

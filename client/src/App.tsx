@@ -80,7 +80,14 @@ function UserLayout({ user, onSignOut }: { user: User | null; onSignOut: () => v
 }
 
 export function App() {
-  const [user, setUser] = useState<User | null>(() => getUser());
+  const [user, setUser] = useState<User | null>(() => {
+    const u = getUser();
+    if (u && !u.role) {
+      clearSession();
+      return null;
+    }
+    return u;
+  });
   const navigate = useNavigate();
 
   function signOut() {
