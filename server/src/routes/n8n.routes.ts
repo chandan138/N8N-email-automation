@@ -1,11 +1,26 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { z } from "zod";
 import { Client } from "../models/Client.js";
 import { Email } from "../models/Email.js";
 import { Activity } from "../models/Activity.js";
 import { generateAiReply } from "../services/ai.service.js";
+import { env } from "../config/env.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 export const n8nRouter = Router();
+
+/**
+ * Basic API key guard for the n8n webhook endpoint (#8).
+ * If N8N_API_KEY is configured, incoming requests must include
+ * it in the x-api-key header. When no key is set (dev mode),
+ * the endpoint remains open for easy local testing.
+ */
+function requireN8nApiKey(req: Request, res: Response, next: NextFunction) {
+  if (env.n8nApiKey && req.headers["x-api-key"] !== env.n8nApiKey) {
+    return res.status(401).json({ message: "Invalid or missing x-api-key header." });
+  }
+  next();
+}
 
 const incomingSchema = z.object({
   clientId: z.string().optional(),
@@ -18,7 +33,7 @@ const incomingSchema = z.object({
   status: z.enum(["received", "suggested", "replied", "failed"]).default("replied")
 });
 
-n8nRouter.post("/incoming", async (req, res) => {
+n8nRouter.post("/incoming", requireN8nApiKey, asyncHandler(async (req, res) => {
   const input = incomingSchema.parse(req.body);
   const client = input.clientId
     ? await Client.findById(input.clientId)
@@ -51,4 +66,4 @@ n8nRouter.post("/incoming", async (req, res) => {
     detail: input.subject
   });
   res.status(201).json({ ok: true, email });
-});
+}));

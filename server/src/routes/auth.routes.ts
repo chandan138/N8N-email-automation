@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { User } from "../models/User.js";
 import { env } from "../config/env.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 export const authRouter = Router();
 
@@ -20,7 +21,7 @@ function sign(user: { id: string; name: string; email: string }) {
   };
 }
 
-authRouter.post("/signup", async (req, res) => {
+authRouter.post("/signup", asyncHandler(async (req, res) => {
   const input = authSchema.extend({ name: z.string().min(2) }).parse(req.body);
   const existing = await User.findOne({ email: input.email.toLowerCase() });
   if (existing) return res.status(409).json({ message: "Account already exists." });
@@ -30,13 +31,13 @@ authRouter.post("/signup", async (req, res) => {
     passwordHash: await bcrypt.hash(input.password, 10)
   });
   res.status(201).json(sign({ id: user.id, name: user.name, email: user.email }));
-});
+}));
 
-authRouter.post("/signin", async (req, res) => {
+authRouter.post("/signin", asyncHandler(async (req, res) => {
   const input = authSchema.omit({ name: true }).parse(req.body);
   const user = await User.findOne({ email: input.email.toLowerCase() });
   if (!user || !(await bcrypt.compare(input.password, user.passwordHash))) {
     return res.status(401).json({ message: "Invalid email or password." });
   }
   res.json(sign({ id: user.id, name: user.name, email: user.email }));
-});
+}));

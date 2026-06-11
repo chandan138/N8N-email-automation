@@ -5,6 +5,7 @@ import { Email } from "../models/Email.js";
 import { Activity } from "../models/Activity.js";
 import { Template } from "../models/Template.js";
 import { createClientWorkflow } from "../services/n8n.service.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 export const clientRouter = Router();
 
@@ -16,12 +17,12 @@ const clientSchema = z.object({
   notes: z.string().optional()
 });
 
-clientRouter.get("/", async (_req, res) => {
+clientRouter.get("/", asyncHandler(async (_req, res) => {
   const clients = await Client.find().sort({ createdAt: -1 });
   res.json({ clients });
-});
+}));
 
-clientRouter.post("/", async (req, res) => {
+clientRouter.post("/", asyncHandler(async (req, res) => {
   const input = clientSchema.parse(req.body);
   const client = await Client.create({
     name: input.name,
@@ -45,9 +46,9 @@ clientRouter.post("/", async (req, res) => {
   }
   await Activity.create({ clientId: client._id, type: "automation", title: "Client automation configured", detail: n8n.message });
   res.status(201).json({ client, n8n });
-});
+}));
 
-clientRouter.get("/:id", async (req, res) => {
+clientRouter.get("/:id", asyncHandler(async (req, res) => {
   const client = await Client.findById(req.params.id);
   if (!client) return res.status(404).json({ message: "Client not found." });
   const [emails, activities, templates] = await Promise.all([
@@ -56,4 +57,4 @@ clientRouter.get("/:id", async (req, res) => {
     Template.find({ $or: [{ clientId: client._id }, { clientId: null }] }).sort({ createdAt: -1 })
   ]);
   res.json({ client, emails, activities, templates });
-});
+}));

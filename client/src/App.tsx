@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes, useNavigate } from "react-router-dom";
 import { AuthPage } from "./pages/AuthPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ClientPage } from "./pages/ClientPage";
@@ -33,10 +33,7 @@ function PrivateLayout({ user, onSignOut }: { user: User | null; onSignOut: () =
   return (
     <>
       <Shell user={user} onSignOut={onSignOut} />
-      <Routes>
-        <Route path="/" element={<DashboardPage />} />
-        <Route path="/clients/:id" element={<ClientPage />} />
-      </Routes>
+      <Outlet />
     </>
   );
 }
@@ -52,7 +49,10 @@ export function App() {
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage onAuth={setUser} />} />
-      <Route path="/*" element={<PrivateLayout user={user} onSignOut={() => { clearSession(); setUser(null); navigate("/auth"); }} />} />
+      <Route path="/" element={<PrivateLayout user={user} onSignOut={() => { clearSession(); setUser(null); navigate("/auth"); }} />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="clients/:id" element={<ClientPage />} />
+      </Route>
     </Routes>
   );
 }

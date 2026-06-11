@@ -10,9 +10,6 @@
     "start": "npm run start --prefix server"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
-  },
-  "dependencies": {
-    "zod": "^4.4.3"
+    "concurrently": "^9.2.1"
   }
 }

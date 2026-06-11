@@ -2,10 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { Template } from "../models/Template.js";
 import { Activity } from "../models/Activity.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 export const templateRouter = Router();
 
-templateRouter.post("/", async (req, res) => {
+templateRouter.post("/", asyncHandler(async (req, res) => {
   const input = z.object({
     clientId: z.string().optional(),
     name: z.string().min(2),
@@ -25,4 +26,4 @@ templateRouter.post("/", async (req, res) => {
   }
 
   res.status(201).json({ template });
-});
+}));

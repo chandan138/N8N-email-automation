@@ -31,9 +31,9 @@ export function AuthPage({ onAuth }: { onAuth: (user: User) => void }) {
           <h1 className="mt-8 text-5xl font-black leading-none md:text-6xl">MailFast AI</h1>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/85">Automate client inboxes with AI replies, Gmail workflows, MongoDB conversation history, templates, notifications, and n8n orchestration.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {["React + TS", "MongoDB", "n8n + Gmail"].map(item => <div key={item} className="rounded-lg border border-white/25 bg-white/15 p-4 font-bold">{item}</div>)}
-        </div>
+        {/* <div className="grid gap-3 sm:grid-cols-3">
+          {["", "MongoDB", "n8n + Gmail"].map(item => <div key={item} className="rounded-lg border border-white/25 bg-white/15 p-4 font-bold">{item}</div>)}
+        </div> */}
       </section>
       <section className="grid place-items-center p-6">
         <div className="w-[min(460px,100%)] rounded-lg border border-slate-200 bg-white p-7 shadow-soft">

@@ -3,10 +3,11 @@ import { Client } from "../models/Client.js";
 import { Email } from "../models/Email.js";
 import { Activity } from "../models/Activity.js";
 import { generateAiReply } from "../services/ai.service.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
 
 export const demoRouter = Router();
 
-demoRouter.post("/incoming", async (req, res) => {
+demoRouter.post("/incoming", asyncHandler(async (req, res) => {
   const client = await Client.findById(req.body.clientId);
   if (!client) return res.status(404).json({ message: "Client not found." });
   const sender = `lead${Math.floor(Math.random() * 90) + 10}@example.com`;
@@ -31,4 +32,4 @@ demoRouter.post("/incoming", async (req, res) => {
   });
   await Activity.create({ clientId: client._id, type: "email", title: `Demo incoming email processed for ${sender}`, detail: subject });
   res.status(201).json({ email });
-});
+}));

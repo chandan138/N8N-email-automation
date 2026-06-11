@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export const env = {
   port: Number(process.env.SERVER_PORT || 5000),
@@ -18,3 +21,9 @@ export const env = {
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   googleRedirectUri: process.env.GOOGLE_REDIRECT_URI || "http://localhost:5000/api/gmail/oauth/callback"
 };
+
+// Warn about insecure JWT secret in production (#7)
+if (process.env.NODE_ENV === "production" && env.jwtSecret === "mailfast_dev_secret") {
+  console.error("FATAL: JWT_SECRET is not set. Refusing to start in production with the default secret.");
+  process.exit(1);
+}

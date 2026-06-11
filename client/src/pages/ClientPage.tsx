@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, MailPlus, Plus } from "lucide-react";
 import { Activity, api, Client, EmailItem, Template } from "../services/api";
@@ -14,21 +14,27 @@ export function ClientPage() {
   const [tab, setTab] = useState<Tab>("communication");
   const [search, setSearch] = useState("");
   const [priority, setPriority] = useState("all");
+  const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!id) return;
-    const { data } = await api.get(`/clients/${id}`);
-    setClient(data.client);
-    setEmails(data.emails);
-    setActivities(data.activities);
-    setTemplates(data.templates);
-  }
+    try {
+      const { data } = await api.get(`/clients/${id}`);
+      setClient(data.client);
+      setEmails(data.emails);
+      setActivities(data.activities);
+      setTemplates(data.templates);
+      setError("");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to load client data.");
+    }
+  }, [id]);
 
   useEffect(() => {
     load();
     const timer = setInterval(load, 6000);
     return () => clearInterval(timer);
-  }, [id]);
+  }, [load]);
 
   const filtered = useMemo(() => emails.filter(email => {
     const text = `${email.from} ${email.subject} ${email.snippet} ${email.aiReply}`.toLowerCase();
@@ -49,6 +55,7 @@ export function ClientPage() {
     await load();
   }
 
+  if (error) return <main className="mx-auto w-[min(1240px,calc(100vw-32px))] py-8"><div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">{error}</div></main>;
   if (!client) return <main className="mx-auto w-[min(1240px,calc(100vw-32px))] py-8">Loading client...</main>;
 
   return (

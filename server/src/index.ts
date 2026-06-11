@@ -26,7 +26,7 @@ app.use("/api/n8n", n8nRouter);
 
 app.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   const message = error?.issues?.[0]?.message || error.message || "Server error";
-  res.status(error.status || 400).json({ message });
+  res.status(error.status || 500).json({ message });
 });
 
 await connectDb();

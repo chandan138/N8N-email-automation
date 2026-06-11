@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, X } from "lucide-react";
 import { api, Client } from "../services/api";
@@ -7,13 +7,25 @@ export function DashboardPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  async function load() {
-    const { data } = await api.get("/clients");
-    setClients(data.clients);
-  }
+  const load = useCallback(async () => {
+    try {
+      const { data } = await api.get("/clients");
+      setClients(data.clients);
+      setError("");
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setError("Session expired. Please sign in again.");
+      } else if (err.code === "ERR_NETWORK") {
+        setError("Backend server is not reachable. Make sure the server is running.");
+      } else {
+        setError(err.response?.data?.message || "Failed to load clients.");
+      }
+    }
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   async function addClient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,6 +57,7 @@ export function DashboardPage() {
           </div>
           <button onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-4 font-bold text-white"><Plus size={18} /> Add client</button>
         </div>
+        {error && <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
         {message && <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50 p-3 text-sm text-teal-800">{message}</div>}
         <div className="mt-5 grid gap-3">
           {clients.map(client => (
