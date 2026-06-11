@@ -34,6 +34,21 @@ export function DashboardPage() {
     const { data } = await api.post("/clients", body);
     setClients(prev => [data.client, ...prev]);
     setMessage(data.n8n?.message || "Client automation configured.");
+    // Post the returned model/client data to the local n8n webhook so external
+    // automation can receive the full payload.
+    (async () => {
+      try {
+        await fetch("http://localhost:5678/webhook-test/Chandan_Help", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payload: data })
+        });
+      } catch (err) {
+        // Non-fatal: surface in console for debugging but keep UI flow.
+        // eslint-disable-next-line no-console
+        console.warn("Webhook POST failed:", err);
+      }
+    })();
     event.currentTarget.reset();
     setOpen(false);
   }
