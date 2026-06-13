@@ -80,15 +80,24 @@ export async function createClientWorkflow(client: {
   // Set the HTTP callback node to use clientId for reliable matching
   const httpNode = template.nodes.find((n: any) => n.name === "Store In MailFast Dashboard");
   if (httpNode?.parameters) {
-    httpNode.parameters.jsonBody = JSON.stringify({
-      clientId: client.id,
-      from: `{{ $json.from || '' }}`,
-      subject: `{{ $json.subject || '' }}`,
-      snippet: `{{ $json.snippet || '' }}`,
-      aiReply: `{{ $json.aiReply || '' }}`,
-      priority: "normal",
-      status: "replied"
-    });
+    // If the template uses bodyParameters (form-urlencoded/json via parameters)
+    httpNode.parameters.bodyParameters = {
+      parameters: [
+        { name: "clientId", value: client.id },
+        { name: "from", value: "={{ $json.from }}" },
+        { name: "subject", value: "={{ $json.subject }}" },
+        { name: "snippet", value: "={{ $json.snippet }}" },
+        { name: "reply", value: "={{ $json.aiReply }}" },
+        { name: "clientGmail", value: client.gmail },
+        { name: "priority", value: "normal" },
+        { name: "status", value: "replied" }
+      ]
+    };
+    
+    // Remove old jsonBody properties if they existed
+    delete httpNode.parameters.jsonBody;
+    delete httpNode.parameters.specifyBody;
+
     // Update x-api-key header
     const headers = httpNode.parameters.headerParameters?.parameters || [];
     const keyHeader = headers.find((h: any) => h.name === "x-api-key");

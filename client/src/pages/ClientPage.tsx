@@ -165,6 +165,7 @@ export function ClientPage() {
                 <article key={email._id} className="reply-item">
                   <div className="reply-subject">{email.subject}</div>
                   <div className="reply-from">↩ To: {email.from}</div>
+                  {email.input && <div className="reply-input" style={{marginBottom: 8, padding: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 4, fontSize: '0.9em'}}><strong>Input:</strong> {email.input}</div>}
                   <p className="reply-body">{email.aiReply}</p>
                 </article>
               ))}
@@ -215,6 +216,7 @@ export function ClientPage() {
                   <div className="activity-pair-meta">{email.from} · {new Date(email.receivedAt).toLocaleString()}</div>
                   <div className="activity-pair-subject">{email.subject}</div>
                   <p className="activity-pair-body">{email.snippet}</p>
+                  {email.input && <div className="activity-pair-input" style={{marginTop: 8, padding: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 4, fontSize: '0.9em'}}><strong>Input:</strong> {email.input}</div>}
                   <span className={`priority-badge ${email.priority}`}>{email.priority}</span>
                 </div>
                 <div className="activity-reply">
@@ -276,6 +278,7 @@ function EmailCard({ email }: { email: EmailItem }) {
       </div>
       <strong className="email-subject">{email.subject}</strong>
       <p className="email-snippet">{email.snippet}</p>
+      {email.input && <div className="email-input" style={{marginTop: 8, padding: 8, backgroundColor: 'rgba(0,0,0,0.03)', borderRadius: 4, fontSize: '0.9em'}}><strong>Input:</strong> {email.input}</div>}
       <div className="email-card-footer">
         <span className={`priority-badge ${email.priority}`}>{email.priority}</span>
         <span className="status-pill">{email.status}</span>

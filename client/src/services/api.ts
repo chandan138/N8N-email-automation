@@ -21,6 +21,7 @@ export type EmailItem = {
   from: string;
   subject: string;
   snippet: string;
+  input?: string;
   aiReply: string;
   priority: "low" | "normal" | "high";
   status: string;

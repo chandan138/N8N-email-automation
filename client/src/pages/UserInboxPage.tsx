@@ -99,6 +99,12 @@ export function UserInboxPage() {
             <section className="email-detail-body">
               <div className="email-section-label">📩 Original email</div>
               <div className="email-snippet-box">{selected.snippet}</div>
+              {selected.input && (
+                <div style={{marginTop: 12}}>
+                  <div className="email-section-label">⚙️ Input</div>
+                  <div className="email-snippet-box" style={{backgroundColor: 'rgba(0,0,0,0.03)'}}>{selected.input}</div>
+                </div>
+              )}
             </section>
             <section className="email-detail-reply">
               <div className="email-section-label">🤖 AI generated reply (sent automatically)</div>
